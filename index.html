@@ -151,7 +151,10 @@
       const winningItem = visibleItems[1];
       document.getElementById("result").textContent = `Выиграно: ${winningItem}`;
       document.getElementById("startButton").disabled = false;
-      Telegram.WebApp.sendData(JSON.stringify({ result: `Выиграно: ${winningItem}` }));
+
+      const initData = Telegram.WebApp.initDataUnsafe;
+      const userId = initData.user?.id;
+      Telegram.WebApp.sendData(JSON.stringify({ result: `Выиграно: ${winningItem}`, userId: userId }));
     }
 
     document.getElementById("startButton").addEventListener("click", spin);
