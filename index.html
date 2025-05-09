@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Wheel of Fortune</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background-color: #a2e7a2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: Arial, sans-serif;
+    }
+    #wheel {
+      position: relative;
+      height: 360px;
+      width: 200px;
+      overflow: hidden;
+      margin-top: 50px;
+    }
+    .item {
+      position: absolute;
+      width: 180px;
+      height: 120px;
+      background-color: #ff4500;
+      color: white;
+      text-align: center;
+      line-height: 120px;
+      border-radius: 5px;
+      opacity: 1;
+      transform: scale(1);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    #startButton {
+      margin-top: 20px;
+      padding: 15px 30px;
+      font-size: 18px;
+      cursor: pointer;
+      background-color: #000;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+    }
+    #result {
+      margin-top: 20px;
+      font-size: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div id="wheel">
+    <div id="item1" class="item" style="top: 0px;">500</div>
+    <div id="item2" class="item" style="top: 120px;">600</div>
+    <div id="item3" class="item" style="top: 240px;">700</div>
+  </div>
+  <button id="startButton">Start</button>
+  <div id="result"></div>
+
+  <script>
+    const items = ["400", "500", "600", "700"];
+    let visibleItems = ["500", "600", "700"];
+    let positions = [0, 120, 240];
+    let speed = 300;
+    let minSpeed = 10;
+    let lastTimestamp = null;
+    let isSpinning = false;
+    const canvasHeight = 360;
+    const itemHeight = 120;
+
+    const itemElements = [
+      { element: document.getElementById("item1"), top: 0 },
+      { element: document.getElementById("item2"), top: 120 },
+      { element: document.getElementById("item3"), top: 240 }
+    ];
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function animate(timestamp) {
+      if (!lastTimestamp) {
+        lastTimestamp = timestamp;
+        requestAnimationFrame(animate);
+        return;
+      }
+
+      const delta = (timestamp - lastTimestamp) / 1000;
+      lastTimestamp = timestamp;
+
+      const totalDuration = 6000;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / totalDuration, 1);
+      const easedProgress = easeOutCubic(progress);
+      speed = 300 * (1 - easedProgress) + minSpeed * easedProgress;
+
+      positions = positions.map(p => p + speed * delta);
+
+      itemElements.forEach((item, index) => {
+        item.top = positions[index];
+        item.element.style.top = item.top + "px";
+
+        if (item.top > canvasHeight - itemHeight) {
+          const opacity = (canvasHeight - item.top) / itemHeight;
+          item.element.style.opacity = opacity;
+          item.element.style.transform = `scale(${0.8 + 0.2 * opacity})`;
+        } else if (item.top < 0) {
+          const opacity = 1 - (Math.abs(item.top) / itemHeight);
+          item.element.style.opacity = opacity;
+          item.element.style.transform = `scale(${0.8 + 0.2 * opacity})`;
+        } else {
+          item.element.style.opacity = 1;
+          item.element.style.transform = "scale(1)";
+        }
+      });
+
+      if (positions[2] > canvasHeight) {
+        const removed = visibleItems.pop();
+        const nextIndex = (items.indexOf(removed) + 1) % items.length;
+        visibleItems.unshift(items[nextIndex]);
+        positions = positions.map(p => p - itemHeight);
+        itemElements.push(itemElements.shift());
+        itemElements.forEach((item, index) => {
+          item.top = positions[index];
+          item.element.style.top = item.top + "px";
+          item.element.textContent = visibleItems[index];
+        });
+      }
+
+      if (speed > minSpeed && elapsed < totalDuration) {
+        requestAnimationFrame(animate);
+      } else {
+        finishAnimation();
+      }
+    }
+
+    let startTime;
+    function spin() {
+      if (isSpinning) return;
+      isSpinning = true;
+      document.getElementById("startButton").disabled = true;
+      startTime = performance.now();
+      lastTimestamp = null;
+      speed = 300;
+      requestAnimationFrame(animate);
+    }
+
+    function finishAnimation() {
+      isSpinning = false;
+      const winningItem = visibleItems[1];
+      document.getElementById("result").textContent = `Выиграно: ${winningItem}`;
+      document.getElementById("startButton").disabled = false;
+      Telegram.WebApp.sendData(JSON.stringify({ result: `Выиграно: ${winningItem}` }));
+    }
+
+    document.getElementById("startButton").addEventListener("click", spin);
+
+    Telegram.WebApp.ready();
+    Telegram.WebApp.expand();
+  </script>
+</body>
+</html>
