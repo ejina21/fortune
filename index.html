@@ -17,9 +17,12 @@
     #wheel {
       position: relative;
       height: 360px;
-      width: 200px;
+      width: 240px;
       overflow: hidden;
       margin-top: 50px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     .item {
       position: absolute;
@@ -32,7 +35,25 @@
       border-radius: 5px;
       opacity: 1;
       transform: scale(1);
-      transition: top 0.5s ease, opacity 0.5s ease, transform 0.5s ease;
+      transition: top 0.5s ease, opacity 0.3s ease, transform 0.3s ease;
+      will-change: transform, opacity;
+    }
+    .arrow {
+      position: absolute;
+      top: 180px;
+      width: 0;
+      height: 0;
+      border-top: 15px solid transparent;
+      border-bottom: 15px solid transparent;
+      z-index: 10;
+    }
+    .arrow-left {
+      left: 0;
+      border-left: 20px solid #000;
+    }
+    .arrow-right {
+      right: 0;
+      border-right: 20px solid #000;
     }
     #startButton {
       margin-top: 20px;
@@ -57,30 +78,27 @@
 </head>
 <body>
   <div id="wheel">
-    <div id="item1" class="item" style="top: 0px;">500</div>
-    <div id="item2" class="item" style="top: 120px;">600</div>
-    <div id="item3" class="item" style="top: 240px;">700</div>
+    <div class="arrow arrow-left"></div>
+    <div class="arrow arrow-right"></div>
   </div>
   <button id="startButton">Start</button>
   <div id="result"></div>
   <div id="debug"></div>
 
   <script>
-    const items = ["400", "500", "600", "700"];
-    let visibleItems = ["500", "600", "700"];
-    let positions = [0, 120, 240];
-    let speed = 300;
-    let minSpeed = 10;
+    // Конфигурируемый список призов - изменяйте для добавления/удаления призов
+    const items = ["400", "500", "600", "700", "800", "900"];
+    let visibleItems = [];
+    let positions = [];
+    let speed = 0;
+    const maxSpeed = 300;
     let lastTimestamp = null;
     let isSpinning = false;
     const canvasHeight = 360;
     const itemHeight = 120;
-
-    const itemElements = [
-      { element: document.getElementById("item1"), top: 0 },
-      { element: document.getElementById("item2"), top: 120 },
-      { element: document.getElementById("item3"), top: 240 }
-    ];
+    const centerPosition = canvasHeight / 2 - itemHeight / 2;
+    let itemElements = [];
+    let nextItemIndex = 0; // Для отслеживания следующего элемента в цикле
 
     const debugDiv = document.getElementById("debug");
 
@@ -88,8 +106,47 @@
       debugDiv.textContent += message + "\n";
     }
 
-    function easeOutCubic(t) {
-      return 1 - Math.pow(1 - t, 3);
+    function easeOutQuad(t) {
+      return t * (2 - t);
+    }
+
+    function easeInOutQuad(t) {
+      return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    }
+
+    function getRandomDuration(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function createInitialItems() {
+      const wheel = document.getElementById("wheel");
+      // Очистка существующих элементов
+      wheel.querySelectorAll('.item').forEach(el => el.remove());
+
+      // Инициализация 3 элементов (или меньше, если список короче)
+      const numInitialItems = Math.min(3, items.length);
+      positions = Array(numInitialItems).fill(0).map((_, i) => i * itemHeight);
+      visibleItems = [];
+      itemElements = [];
+      nextItemIndex = numInitialItems % items.length; // Следующий элемент после начальных
+
+      for (let i = 0; i < numInitialItems; i++) {
+        const value = items[i % items.length];
+        const top = i * itemHeight;
+
+        const element = document.createElement("div");
+        element.className = "item";
+        element.textContent = value;
+        element.style.top = `${top}px`;
+        wheel.appendChild(element);
+
+        visibleItems.push(value);
+        itemElements.push({
+          element,
+          top,
+          value
+        });
+      }
     }
 
     function animate(timestamp) {
@@ -99,110 +156,154 @@
         return;
       }
 
-      const delta = (timestamp - lastTimestamp) / 1000;
+      const deltaTime = timestamp - lastTimestamp;
       lastTimestamp = timestamp;
 
-      const totalDuration = 6000;
       const elapsed = timestamp - startTime;
-      const progress = Math.min(elapsed / totalDuration, 1);
-      const easedProgress = easeOutCubic(progress);
-      speed = 300 * (1 - easedProgress) + minSpeed * easedProgress;
+      let normalizedTime;
 
-      positions = positions.map(p => p + speed * delta);
+      if (elapsed < accelerationDuration) {
+        normalizedTime = elapsed / accelerationDuration;
+        speed = maxSpeed * easeOutQuad(normalizedTime);
+      } else if (elapsed < accelerationDuration + decelerationDuration) {
+        normalizedTime = (elapsed - accelerationDuration) / decelerationDuration;
+        speed = maxSpeed * (1 - easeInOutQuad(normalizedTime));
+      } else {
+        speed = 0;
+        alignToCenter();
+        return;
+      }
 
+      positions = positions.map(p => p + speed * deltaTime / 1000);
       itemElements.forEach((item, index) => {
         item.top = positions[index];
-        item.element.style.top = item.top + "px";
+        item.element.style.top = `${item.top}px`;
+      });
 
+      if (positions[positions.length - 1] < canvasHeight) {
+        const newTop = positions[0] - itemHeight;
+        positions.unshift(newTop);
+
+        // Циклический выбор следующего элемента
+        const newValue = items[nextItemIndex];
+        nextItemIndex = (nextItemIndex + 1) % items.length;
+        visibleItems.unshift(newValue);
+
+        const newElement = document.createElement("div");
+        newElement.className = "item";
+        newElement.textContent = newValue;
+        newElement.style.top = `${newTop}px`;
+        newElement.style.opacity = "0";
+        document.getElementById("wheel").appendChild(newElement);
+
+        itemElements.unshift({
+          element: newElement,
+          top: newTop,
+          value: newValue
+        });
+      }
+
+      itemElements.forEach((item) => {
         if (item.top > canvasHeight - itemHeight) {
-          const opacity = (canvasHeight - item.top) / itemHeight;
+          const opacity = Math.min(1, (canvasHeight - item.top) / (itemHeight * 0.5));
           item.element.style.opacity = opacity;
           item.element.style.transform = `scale(${0.8 + 0.2 * opacity})`;
         } else if (item.top < 0) {
-          const opacity = 1 - (Math.abs(item.top) / itemHeight);
+          const opacity = Math.min(1, (item.top + itemHeight) / (itemHeight * 0.5));
           item.element.style.opacity = opacity;
           item.element.style.transform = `scale(${0.8 + 0.2 * opacity})`;
         } else {
-          item.element.style.opacity = 1;
+          item.element.style.opacity = "1";
           item.element.style.transform = "scale(1)";
         }
       });
 
-      // Добавляем новый элемент сверху, когда нижний начинает уходить
-      if (positions[2] >= canvasHeight - itemHeight) {
-        const removed = visibleItems.pop();
-        const nextIndex = (items.indexOf(removed) + 1) % items.length;
-        const newItemValue = items[nextIndex];
-        visibleItems.unshift(newItemValue);
-
-        // Создаем новый элемент сверху
-        const newElement = document.createElement("div");
-        newElement.className = "item";
-        newElement.textContent = newItemValue;
-        newElement.style.top = `-${itemHeight}px`;
-        newElement.style.opacity = "0";
-        newElement.style.transform = "scale(0.8)";
-        document.getElementById("wheel").appendChild(newElement);
-
-        // Добавляем новый элемент в массив
-        itemElements.unshift({ element: newElement, top: -itemHeight });
-        positions.unshift(-itemHeight);
-
-        // Плавно анимируем новый элемент
-        setTimeout(() => {
-          itemElements[0].top = 0;
-          itemElements[0].element.style.top = "0px";
-          itemElements[0].element.style.opacity = "1";
-          itemElements[0].element.style.transform = "scale(1)";
-        }, 10);
-      }
-
-      // Удаляем нижний элемент только после полного ухода
-      if (positions[itemElements.length - 1] > canvasHeight) {
-        const lastElement = itemElements.pop();
-        lastElement.element.remove();
+      while (positions.length > Math.min(3, items.length) && positions[positions.length - 1] > canvasHeight) {
         positions.pop();
+        const removedItem = itemElements.pop();
+        removedItem.element.remove();
+        visibleItems.pop();
       }
 
-      if (speed > minSpeed && elapsed < totalDuration) {
-        requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
+    }
+
+    function alignToCenter() {
+      let closestItem = null;
+      let minDistance = Infinity;
+
+      itemElements.forEach(item => {
+        const distance = Math.abs(item.top - centerPosition);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestItem = item;
+        }
+      });
+
+      if (closestItem) {
+        const offset = closestItem.top - centerPosition;
+
+        itemElements.forEach(item => {
+          item.top -= offset;
+          item.element.style.top = `${item.top}px`;
+        });
+
+        positions = itemElements.map(item => item.top);
+
+        setTimeout(() => {
+          finishAnimation(closestItem.value);
+        }, 500);
       } else {
-        finishAnimation();
+        finishAnimation(null);
       }
     }
 
     let startTime;
+    let accelerationDuration;
+    let decelerationDuration;
+
     function spin() {
-      if (isSpinning) return;
+      if (isSpinning || items.length === 0) return;
       isSpinning = true;
       document.getElementById("startButton").disabled = true;
+      document.getElementById("result").textContent = "";
+      debugDiv.textContent = "";
+
+      accelerationDuration = getRandomDuration(1800, 2500);
+      decelerationDuration = getRandomDuration(3000, 5000);
+
+      debug(`Ускорение: ${(accelerationDuration/1000).toFixed(1)}с, Замедление: ${(decelerationDuration/1000).toFixed(1)}с`);
+
       startTime = performance.now();
       lastTimestamp = null;
-      speed = 300;
+      speed = 0;
+
+      createInitialItems();
+
       requestAnimationFrame(animate);
     }
 
-    function finishAnimation() {
+    function finishAnimation(winningValue) {
       isSpinning = false;
-      const winningItem = visibleItems[1];
-      document.getElementById("result").textContent = `Выиграно: ${winningItem}`;
       document.getElementById("startButton").disabled = false;
 
-      Telegram.WebApp.ready();
-
-      const dataToSend = JSON.stringify({
-        result: `Выиграно: ${winningItem}`
-      });
-      debug("Отправляем данные: " + dataToSend);
-
-      try {
-        Telegram.WebApp.sendData(dataToSend);
-        debug("Данные успешно отправлены в Telegram!");
-      } catch (error) {
-        debug("Ошибка при отправке данных: " + error.message);
+      if (winningValue) {
+        document.getElementById("result").textContent = `Выиграно: ${winningValue}`;
+        if (window.Telegram && Telegram.WebApp) {
+          try {
+            Telegram.WebApp.sendData(JSON.stringify({
+              result: winningValue
+            }));
+            debug("Результат отправлен в Telegram");
+          } catch (error) {
+            debug("Ошибка отправки: " + error.message);
+          }
+        }
       }
     }
 
+    // Инициализация элементов при загрузке страницы
+    createInitialItems();
     document.getElementById("startButton").addEventListener("click", spin);
   </script>
 </body>
