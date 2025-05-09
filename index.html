@@ -32,7 +32,7 @@
       border-radius: 5px;
       opacity: 1;
       transform: scale(1);
-      transition: opacity 0.5s ease, transform 0.5s ease;
+      transition: top 0.5s ease, opacity 0.5s ease, transform 0.5s ease;
     }
     #startButton {
       margin-top: 20px;
@@ -128,17 +128,40 @@
         }
       });
 
-      if (positions[2] > canvasHeight) {
+      // Добавляем новый элемент сверху, когда нижний начинает уходить
+      if (positions[2] >= canvasHeight - itemHeight) {
         const removed = visibleItems.pop();
         const nextIndex = (items.indexOf(removed) + 1) % items.length;
-        visibleItems.unshift(items[nextIndex]);
-        positions = positions.map(p => p - itemHeight);
-        itemElements.push(itemElements.shift());
-        itemElements.forEach((item, index) => {
-          item.top = positions[index];
-          item.element.style.top = item.top + "px";
-          item.element.textContent = visibleItems[index];
-        });
+        const newItemValue = items[nextIndex];
+        visibleItems.unshift(newItemValue);
+
+        // Создаем новый элемент сверху
+        const newElement = document.createElement("div");
+        newElement.className = "item";
+        newElement.textContent = newItemValue;
+        newElement.style.top = `-${itemHeight}px`;
+        newElement.style.opacity = "0";
+        newElement.style.transform = "scale(0.8)";
+        document.getElementById("wheel").appendChild(newElement);
+
+        // Добавляем новый элемент в массив
+        itemElements.unshift({ element: newElement, top: -itemHeight });
+        positions.unshift(-itemHeight);
+
+        // Плавно анимируем новый элемент
+        setTimeout(() => {
+          itemElements[0].top = 0;
+          itemElements[0].element.style.top = "0px";
+          itemElements[0].element.style.opacity = "1";
+          itemElements[0].element.style.transform = "scale(1)";
+        }, 10);
+      }
+
+      // Удаляем нижний элемент только после полного ухода
+      if (positions[itemElements.length - 1] > canvasHeight) {
+        const lastElement = itemElements.pop();
+        lastElement.element.remove();
+        positions.pop();
       }
 
       if (speed > minSpeed && elapsed < totalDuration) {
@@ -181,7 +204,6 @@
     }
 
     document.getElementById("startButton").addEventListener("click", spin);
-
   </script>
 </body>
 </html>
