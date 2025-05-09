@@ -47,6 +47,11 @@
       margin-top: 20px;
       font-size: 24px;
     }
+    #debug {
+      margin-top: 10px;
+      font-size: 16px;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -57,6 +62,7 @@
   </div>
   <button id="startButton">Start</button>
   <div id="result"></div>
+  <div id="debug"></div>
 
   <script>
     const items = ["400", "500", "600", "700"];
@@ -74,6 +80,12 @@
       { element: document.getElementById("item2"), top: 120 },
       { element: document.getElementById("item3"), top: 240 }
     ];
+
+    const debugDiv = document.getElementById("debug");
+
+    function debug(message) {
+      debugDiv.textContent += message + "\n";
+    }
 
     function easeOutCubic(t) {
       return 1 - Math.pow(1 - t, 3);
@@ -154,13 +166,33 @@
 
       const initData = Telegram.WebApp.initDataUnsafe;
       const userId = initData.user?.id;
-      Telegram.WebApp.sendData(JSON.stringify({ result: `Выиграно: ${winningItem}`, userId: userId }));
+
+      if (!userId) {
+        debug("Ошибка: Не удалось получить userId. Проверьте, запущено ли приложение внутри Telegram.");
+        return;
+      }
+
+      const dataToSend = JSON.stringify({ result: `Выиграно: ${winningItem}`, userId: userId });
+      debug("Отправляем данные: " + dataToSend);
+
+      try {
+        Telegram.WebApp.sendData(dataToSend);
+        debug("Данные успешно отправлены в Telegram!");
+      } catch (error) {
+        debug("Ошибка при отправке данных: " + error.message);
+      }
     }
 
     document.getElementById("startButton").addEventListener("click", spin);
 
-    Telegram.WebApp.ready();
-    Telegram.WebApp.expand();
+    // Инициализация Telegram Web App
+    try {
+      Telegram.WebApp.ready();
+      Telegram.WebApp.expand();
+      debug("Telegram Web App инициализирован. Пользователь: " + JSON.stringify(Telegram.WebApp.initDataUnsafe));
+    } catch (error) {
+      debug("Ошибка инициализации Telegram Web App: " + error.message);
+    }
   </script>
 </body>
 </html>
