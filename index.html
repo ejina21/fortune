@@ -28,15 +28,20 @@
       position: absolute;
       width: 180px;
       height: 120px;
-      background-color: #ff4500;
-      color: white;
-      text-align: center;
-      line-height: 120px;
       border-radius: 5px;
       opacity: 1;
       transform: scale(1);
       transition: top 0.5s ease, opacity 0.3s ease, transform 0.3s ease;
       will-change: transform, opacity;
+    }
+    .item-image {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
     }
     .arrow {
       position: absolute;
@@ -86,8 +91,10 @@
   <div id="debug"></div>
 
   <script>
-    // Конфигурируемый список призов - изменяйте для добавления/удаления призов
-    const items = ["400", "500", "600", "700", "800", "900"];
+    // Убедитесь, что изображения (PNG с прозрачным фоном) находятся в папке images/
+    // Пример: images/flashlight.png, images/mouse.png, images/mug.png
+    // Конфигурируемый список призов - изменяйте для добавления/удаления предметов
+    const items = ["ice", "mouse", "mug", "burger"];
     let visibleItems = [];
     let positions = [];
     let speed = 0;
@@ -98,7 +105,7 @@
     const itemHeight = 120;
     const centerPosition = canvasHeight / 2 - itemHeight / 2;
     let itemElements = [];
-    let nextItemIndex = 0; // Для отслеживания следующего элемента в цикле
+    let nextItemIndex = 0;
 
     const debugDiv = document.getElementById("debug");
 
@@ -120,15 +127,13 @@
 
     function createInitialItems() {
       const wheel = document.getElementById("wheel");
-      // Очистка существующих элементов
       wheel.querySelectorAll('.item').forEach(el => el.remove());
 
-      // Инициализация 3 элементов (или меньше, если список короче)
       const numInitialItems = Math.min(3, items.length);
       positions = Array(numInitialItems).fill(0).map((_, i) => i * itemHeight);
       visibleItems = [];
       itemElements = [];
-      nextItemIndex = numInitialItems % items.length; // Следующий элемент после начальных
+      nextItemIndex = numInitialItems % items.length;
 
       for (let i = 0; i < numInitialItems; i++) {
         const value = items[i % items.length];
@@ -136,7 +141,10 @@
 
         const element = document.createElement("div");
         element.className = "item";
-        element.textContent = value;
+        const img = document.createElement("img");
+        img.className = "item-image";
+        img.src = `images/${value}.png`;
+        element.appendChild(img);
         element.style.top = `${top}px`;
         wheel.appendChild(element);
 
@@ -184,14 +192,16 @@
         const newTop = positions[0] - itemHeight;
         positions.unshift(newTop);
 
-        // Циклический выбор следующего элемента
         const newValue = items[nextItemIndex];
         nextItemIndex = (nextItemIndex + 1) % items.length;
         visibleItems.unshift(newValue);
 
         const newElement = document.createElement("div");
         newElement.className = "item";
-        newElement.textContent = newValue;
+        const img = document.createElement("img");
+        img.className = "item-image";
+        img.src = `images/${newValue}.png`;
+        newElement.appendChild(img);
         newElement.style.top = `${newTop}px`;
         newElement.style.opacity = "0";
         document.getElementById("wheel").appendChild(newElement);
