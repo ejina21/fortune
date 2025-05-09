@@ -163,8 +163,9 @@
       const winningItem = visibleItems[1];
       document.getElementById("result").textContent = `Выиграно: ${winningItem}`;
       document.getElementById("startButton").disabled = false;
-
-      const initData = Telegram.WebApp.initDataUnsafe;
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      const initData = tg.initDataUnsafe;
       const userId = initData.user?.id;
 
       if (!userId) {
@@ -172,11 +173,11 @@
         return;
       }
 
-      const dataToSend = JSON.stringify({ result: `Выиграно: ${winningItem}`, userId: userId });
+      const dataToSend = JSON.stringify({ result: `Выиграно: ${winningItem}` });
       debug("Отправляем данные: " + dataToSend);
 
       try {
-        Telegram.WebApp.sendData(dataToSend);
+        tg.sendData(dataToSend);
         debug("Данные успешно отправлены в Telegram!");
       } catch (error) {
         debug("Ошибка при отправке данных: " + error.message);
@@ -184,15 +185,6 @@
     }
 
     document.getElementById("startButton").addEventListener("click", spin);
-
-    // Инициализация Telegram Web App
-    try {
-      Telegram.WebApp.ready();
-      Telegram.WebApp.expand();
-      debug("Telegram Web App инициализирован. Пользователь: " + JSON.stringify(Telegram.WebApp.initDataUnsafe));
-    } catch (error) {
-      debug("Ошибка инициализации Telegram Web App: " + error.message);
-    }
   </script>
 </body>
 </html>
