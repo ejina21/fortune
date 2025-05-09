@@ -164,28 +164,40 @@
       const winningItem = visibleItems[1];
       document.getElementById("result").textContent = `Выиграно: ${winningItem}`;
       document.getElementById("startButton").disabled = false;
+
+      // Инициализация Telegram Web App
       Telegram.WebApp.ready();
       const initData = Telegram.WebApp.initDataUnsafe;
-      const userName = initData.user?.first_name;
+      const userId = initData?.user?.id;
 
-      if (!userName) {
+      if (!userId) {
         debug("Ошибка: Не удалось получить userId. Проверьте, запущено ли приложение внутри Telegram.");
         return;
       }
 
-      const dataToSend = JSON.stringify({ result: `Выиграно: ${winningItem}` });
+      const dataToSend = JSON.stringify({
+        result: `Выиграно: ${winningItem}`,
+        userId: userId
+      });
       debug("Отправляем данные: " + dataToSend);
 
       try {
         Telegram.WebApp.sendData(dataToSend);
         debug("Данные успешно отправлены в Telegram!");
-        Telegram.WebApp.close();
       } catch (error) {
         debug("Ошибка при отправке данных: " + error.message);
       }
     }
 
     document.getElementById("startButton").addEventListener("click", spin);
+
+    // Проверка инициализации при загрузке
+    if (typeof Telegram === "undefined" || !Telegram.WebApp) {
+      debug("Ошибка: Telegram Web App SDK не загружен.");
+    } else {
+      Telegram.WebApp.expand();
+      debug("Telegram Web App инициализирован. Пользователь: " + JSON.stringify(Telegram.WebApp.initDataUnsafe));
+    }
   </script>
 </body>
 </html>
