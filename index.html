@@ -64,11 +64,16 @@
       margin-top: 20px;
       padding: 15px 30px;
       font-size: 18px;
+      font-weight: bold;
+      font-style: italic;
       cursor: pointer;
       background-color: #000;
       color: #fff;
       border: none;
-      border-radius: 5px;
+      border-radius: 15px;
+      text-transform: uppercase;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      background-image: linear-gradient(to bottom, #2a3435, #000);
     }
     #result {
       margin-top: 20px;
@@ -86,7 +91,7 @@
     <div class="arrow arrow-left"></div>
     <div class="arrow arrow-right"></div>
   </div>
-  <button id="startButton">Start</button>
+  <button id="startButton">Вращать</button>
   <div id="result"></div>
   <div id="debug"></div>
 
@@ -94,11 +99,11 @@
     // Убедитесь, что изображения (PNG с прозрачным фоном) находятся в папке images/
     // Пример: images/flashlight.png, images/mouse.png, images/mug.png
     // Конфигурируемый список призов - изменяйте для добавления/удаления предметов
-    const items = ["1", "2", "3", "4", "5", "6", "7", "8"];
+    const items = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
     let visibleItems = [];
     let positions = [];
     let speed = 0;
-    const maxSpeed = 300;
+    const maxSpeed = 400;
     let lastTimestamp = null;
     let isSpinning = false;
     const canvasHeight = 360;
@@ -217,7 +222,7 @@
         if (item.top > canvasHeight - itemHeight) {
           const opacity = Math.min(1, (canvasHeight - item.top) / (itemHeight * 0.5));
           item.element.style.opacity = opacity;
-          item.element.style.transform = `scale(${0.8 + 0.2 * opacity})`;
+          item.element.style.transform = `scale(${0.9 + 0.1 * opacity})`;
         } else if (item.top < 0) {
           const opacity = Math.min(1, (item.top + itemHeight) / (itemHeight * 0.5));
           item.element.style.opacity = opacity;
@@ -227,8 +232,7 @@
           item.element.style.transform = "scale(1)";
         }
       });
-
-      while (positions.length > Math.min(3, items.length) && positions[positions.length - 1] > canvasHeight) {
+      while (positions.length > Math.min(3, items.length) && positions[positions.length - 1] > canvasHeight + 100) {
         positions.pop();
         const removedItem = itemElements.pop();
         removedItem.element.remove();
@@ -279,8 +283,8 @@
       document.getElementById("result").textContent = "";
       debugDiv.textContent = "";
 
-      accelerationDuration = getRandomDuration(1800, 2500);
-      decelerationDuration = getRandomDuration(3000, 5000);
+      accelerationDuration = getRandomDuration(2800, 4500);
+      decelerationDuration = getRandomDuration(5000, 8000);
 
       debug(`Ускорение: ${(accelerationDuration/1000).toFixed(1)}с, Замедление: ${(decelerationDuration/1000).toFixed(1)}с`);
 
@@ -293,16 +297,32 @@
       requestAnimationFrame(animate);
     }
 
-    function finishAnimation(winningValue) {
+    function getItemNameById(id) {
+      const itemsMap = {
+        '1': 'Штука 1',
+        '2': 'Штука 2',
+        '3': 'Штука 3',
+        '4': 'Штука 4',
+        '5': 'Штука 5',
+        '6': 'Штука 6',
+        '7': 'Штука 7',
+        '8': 'Штука 8',
+        '9': 'Штука 9',
+        '10': 'Штука 10',
+      };
+      return itemsMap[id] || `Приз #${id}`;
+    }
+
+    function finishAnimation(winningID) {
       isSpinning = false;
       document.getElementById("startButton").disabled = false;
 
-      if (winningValue) {
-        document.getElementById("result").textContent = `Выиграно: ${winningValue}`;
+      if (winningID) {
+        const winValue = getItemNameById(winningID);
         if (window.Telegram && Telegram.WebApp) {
           try {
             Telegram.WebApp.sendData(JSON.stringify({
-              result: winningValue
+              result: winValue
             }));
             debug("Результат отправлен в Telegram");
           } catch (error) {
