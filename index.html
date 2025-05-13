@@ -31,7 +31,7 @@
       border-radius: 5px;
       opacity: 1;
       transform: scale(1);
-      transition: top 0.5s ease, opacity 0.3s ease, transform 0.3s ease;
+      transition: top 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
       will-change: transform, opacity;
     }
     .item-image {
@@ -103,7 +103,7 @@
     let visibleItems = [];
     let positions = [];
     let speed = 0;
-    const maxSpeed = 400;
+    const maxSpeed = 360;
     let lastTimestamp = null;
     let isSpinning = false;
     const canvasHeight = 360;
@@ -119,7 +119,7 @@
     }
 
     function easeOutQuad(t) {
-      return t * (2 - t);
+      return 1 - (1 - t) * (1 - t);
     }
 
     function easeInOutQuad(t) {
@@ -134,7 +134,7 @@
       const wheel = document.getElementById("wheel");
       wheel.querySelectorAll('.item').forEach(el => el.remove());
 
-      const numInitialItems = Math.min(3, items.length);
+      const numInitialItems = Math.min(4, items.length);
       positions = Array(numInitialItems).fill(0).map((_, i) => i * itemHeight);
       visibleItems = [];
       itemElements = [];
@@ -193,7 +193,7 @@
         item.element.style.top = `${item.top}px`;
       });
 
-      if (positions[positions.length - 1] < canvasHeight) {
+      if (positions[positions.length - 1] >= canvasHeight) {
         const newTop = positions[0] - itemHeight;
         positions.unshift(newTop);
 
@@ -222,7 +222,7 @@
         if (item.top > canvasHeight - itemHeight) {
           const opacity = Math.min(1, (canvasHeight - item.top) / (itemHeight * 0.5));
           item.element.style.opacity = opacity;
-          item.element.style.transform = `scale(${0.9 + 0.1 * opacity})`;
+          item.element.style.transform = `scale(${0.8 + 0.2 * opacity})`;
         } else if (item.top < 0) {
           const opacity = Math.min(1, (item.top + itemHeight) / (itemHeight * 0.5));
           item.element.style.opacity = opacity;
@@ -232,7 +232,11 @@
           item.element.style.transform = "scale(1)";
         }
       });
-      while (positions.length > Math.min(3, items.length) && positions[positions.length - 1] > canvasHeight + 100) {
+      console.log(`Позиции: ${positions.length}`)
+      while (
+              positions.length > Math.min(4, items.length)
+              && positions[positions.length - 1] > canvasHeight + itemHeight * 0.5
+              ) {
         positions.pop();
         const removedItem = itemElements.pop();
         removedItem.element.remove();
@@ -286,8 +290,6 @@
       accelerationDuration = getRandomDuration(2800, 4500);
       decelerationDuration = getRandomDuration(5000, 8000);
 
-      debug(`Ускорение: ${(accelerationDuration/1000).toFixed(1)}с, Замедление: ${(decelerationDuration/1000).toFixed(1)}с`);
-
       startTime = performance.now();
       lastTimestamp = null;
       speed = 0;
@@ -332,7 +334,6 @@
       }
     }
 
-    // Инициализация элементов при загрузке страницы
     createInitialItems();
     document.getElementById("startButton").addEventListener("click", spin);
   </script>
